@@ -53,6 +53,10 @@ export function MatchRevealPage({ match }: Props) {
         <p className="text-base leading-relaxed text-eas-cream/90">{match.reason}</p>
       </div>
 
+      <p className="mx-auto mt-4 w-full max-w-sm text-center text-sm font-semibold text-eas-cream/80">
+        ¡Haz una captura de pantalla! 📸
+      </p>
+
       <div className="mt-auto pt-10 text-center text-sm text-eas-cream/60">
         {isTrio
           ? `Busca a ${partnerNames.join(' y ')} por la sala 👀`
