@@ -100,10 +100,13 @@ export async function fetchAdminResults(): Promise<AdminResults> {
   return (await res.json()) as AdminResults;
 }
 
-export interface GenerateMatchesResult {
+/**
+ * POST /api/match returns the fresh match data in-band, avoiding a
+ * follow-up GET /api/admin/results (which would hit KV.list and could
+ * come back stale for a while after the writes the worker just did).
+ */
+export interface GenerateMatchesResult extends AdminResults {
   ok: true;
-  participants: number;
-  pairs: number;
 }
 
 export async function generateMatches(): Promise<GenerateMatchesResult> {

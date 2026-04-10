@@ -50,10 +50,19 @@ export async function handleMatch(request: Request, env: Env): Promise<Response>
   await Promise.all(writes);
   await markMatchesGenerated(env);
 
+  // Return the fresh results in-band so the admin UI can render them
+  // without a follow-up GET /api/admin/results. KV.list is eventually
+  // consistent, so that second read can (and does) come back stale for
+  // a while after the writes above — leaving the dashboard with no
+  // table. The data is already in memory here; just hand it back.
   return jsonResponse({
     ok: true,
-    participants: participants.length,
-    pairs: pairs.length,
+    participants: participants.map((p) => ({
+      sessionId: p.sessionId,
+      name: p.name,
+      completedAt: p.completedAt,
+    })),
+    pairs,
   });
 }
 

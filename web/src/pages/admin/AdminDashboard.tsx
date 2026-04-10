@@ -3,7 +3,6 @@ import {
   AuthError,
   clearPassword,
   downloadCsv,
-  fetchAdminResults,
   generateMatches,
   resetAll,
   type AdminPair,
@@ -67,16 +66,6 @@ export function AdminDashboard({ initialResults, onSignOut }: Props) {
     };
   }, []);
 
-  async function refreshResults() {
-    try {
-      const r = await fetchAdminResults();
-      setResults(r);
-    } catch (err) {
-      if (handleAuthError(err)) return;
-      setError(err instanceof Error ? err.message : 'Error al cargar resultados');
-    }
-  }
-
   async function handleGenerate() {
     if (generating) return;
     if (status.completed < 2) {
@@ -94,8 +83,13 @@ export function AdminDashboard({ initialResults, onSignOut }: Props) {
     setGenerating(true);
     setError(null);
     try {
-      await generateMatches();
-      await refreshResults();
+      // The worker hands back the fresh pairs+participants in the POST
+      // response, so we update local state directly instead of doing a
+      // follow-up GET (KV.list is eventually consistent and was coming
+      // back empty for a while after the writes).
+      const fresh = await generateMatches();
+      setResults({ participants: fresh.participants, pairs: fresh.pairs });
+      setStatus((s) => ({ ...s, matchesGenerated: true }));
     } catch (err) {
       if (handleAuthError(err)) return;
       setError(err instanceof Error ? err.message : 'Error al generar matches');
