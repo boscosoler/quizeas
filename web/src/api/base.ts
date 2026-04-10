@@ -7,8 +7,15 @@
  *   so CORS is permissive on the Worker side.
  *
  * Override at build time with VITE_API_BASE if you deploy elsewhere.
+ *
+ * NOTE: we coerce empty strings to undefined before the `??` fallback.
+ * GitHub Actions expands `${{ vars.VITE_API_BASE }}` to "" when the repo
+ * variable is unset, and `"" ?? fallback` resolves to "" (not the
+ * fallback) — which would turn every apiUrl() into a relative path
+ * served by GitHub Pages and 405 every POST. Don't let that happen.
  */
-const fromEnv = import.meta.env.VITE_API_BASE as string | undefined;
+const rawEnv = import.meta.env.VITE_API_BASE as string | undefined;
+const fromEnv = rawEnv && rawEnv.trim() !== '' ? rawEnv.trim() : undefined;
 
 export const API_BASE: string =
   fromEnv ??
