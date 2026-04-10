@@ -1,0 +1,16 @@
+{
+  "name": "@quizeas/worker",
+  "private": true,
+  "version": "0.1.0",
+  "description": "QuizEAS backend on Cloudflare Workers.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260410.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.81.1"
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "questions": [
+    {
+      "id": 0,
+      "text": "Escribe tu nombre y apellido",
+      "type": "text",
+      "options": [],
+      "category": "Identificación",
+      "matchWeight": 0,
+      "correctAnswer": null
+    },
+    {
+      "id": 1,
+      "text": "¿Qué superpoder elegirías?",
+      "type": "choice",
+      "options": [
+        "Teletransportarte",
+        "Leer la mente",
+        "Parar el tiempo",
+        "Ser invisible"
+      ],
+      "category": "Personalidad",
+      "matchWeight": 2,
+      "correctAnswer": 2
+    },
+    {
+      "id": 2,
+      "text": "¿Qué prefieres?",
+      "type": "choice",
+      "options": [
+        "Lanzar rápido e iterar",
+        "Planificar bien antes de ejecutar"
+      ],
+      "category": "Estilo de trabajo",
+      "matchWeight": 3,
+      "correctAnswer": 0
+    },
+    {
+      "id": 3,
+      "text": "Es viernes noche, ¿qué haces?",
+      "type": "choice",
+      "options": [
+        "Cena con amigos",
+        "Trabajando en mi proyecto",
+        "Viendo una serie",
+        "En un evento o meetup"
+      ],
+      "category": "Estilo de vida",
+      "matchWeight": 2,
+      "correctAnswer": 3
+    },
+    {
+      "id": 4,
+      "text": "¿Qué valoras más en un negocio?",
+      "type": "choice",
+      "options": [
+        "Libertad y flexibilidad",
+        "Crecimiento y escalabilidad"
+      ],
+      "category": "Visión emprendedora",
+      "matchWeight": 3,
+      "correctAnswer": 0
+    },
+    {
+      "id": 5,
+      "text": "¿Con qué frase te identificas más?",
+      "type": "choice",
+      "options": [
+        "«Hecho es mejor que perfecto»",
+        "«Los detalles importan»",
+        "«El equipo lo es todo»",
+        "«Los datos no mienten»"
+      ],
+      "category": "Filosofía",
+      "matchWeight": 3,
+      "correctAnswer": 0
+    },
+    {
+      "id": 6,
+      "text": "¿En qué fase está tu proyecto actual?",
+      "type": "choice",
+      "options": [
+        "Idea / validación",
+        "Primeros clientes",
+        "Crecimiento",
+        "Consolidado"
+      ],
+      "category": "Contexto profesional",
+      "matchWeight": 2,
+      "correctAnswer": 1
+    },
+    {
+      "id": 7,
+      "text": "¿Qué prefieres?",
+      "type": "choice",
+      "options": [
+        "Trabajar solo/a desde cualquier lugar",
+        "Rodearte de gente en un coworking"
+      ],
+      "category": "Forma de trabajar",
+      "matchWeight": 2,
+      "correctAnswer": 1
+    },
+    {
+      "id": 8,
+      "text": "Si dieras una charla, ¿sobre qué sería?",
+      "type": "choice",
+      "options": [
+        "Productividad y hábitos",
+        "Marketing y ventas",
+        "Tecnología e IA",
+        "Propósito y bienestar"
+      ],
+      "category": "Intereses",
+      "matchWeight": 3,
+      "correctAnswer": 2
+    },
+    {
+      "id": 9,
+      "text": "¿Cuál es tu guilty pleasure?",
+      "type": "choice",
+      "options": [
+        "Reality shows",
+        "Comida basura a las 2am",
+        "Procrastinar en redes",
+        "Comprar cursos que nunca hago"
+      ],
+      "category": "Rompe-hielo",
+      "matchWeight": 1,
+      "correctAnswer": 3
+    },
+    {
+      "id": 10,
+      "text": "¿Qué prefieres?",
+      "type": "choice",
+      "options": [
+        "Emprender solo/a",
+        "Buscar un/a cofundador/a"
+      ],
+      "category": "Mentalidad",
+      "matchWeight": 3,
+      "correctAnswer": 1
+    }
+  ]
+}

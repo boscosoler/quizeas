@@ -1,0 +1,28 @@
+name = "quizeas"
+main = "src/index.ts"
+compatibility_date = "2024-11-06"
+
+# Dev server
+[dev]
+port = 8787
+ip = "0.0.0.0"
+
+# Production custom domain. On first `wrangler deploy`, Cloudflare creates
+# (or binds to) api.quizeas.sinoficina.com and wires up the TLS cert.
+# The zone `sinoficina.com` must live in the same Cloudflare account.
+routes = [
+  { pattern = "api.quizeas.sinoficina.com", custom_domain = true }
+]
+
+# KV binding — stores participants, pairs and match results
+[[kv_namespaces]]
+binding = "KV"
+id = "eeabb4d970bd4e4ebc3946603d33860f"
+
+# Public vars (non-secrets). Override per environment if needed.
+[vars]
+MATCH_MODEL = "claude-sonnet-4-20250514"
+
+# Secrets (ANTHROPIC_API_KEY, ADMIN_PASSWORD) are NOT stored here.
+# - Local dev: put them in worker/.dev.vars (see .dev.vars.example)
+# - Production: `npx wrangler secret put ANTHROPIC_API_KEY` / `ADMIN_PASSWORD`

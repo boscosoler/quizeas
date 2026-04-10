@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-eas-dark text-eas-cream font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Disable iOS double-tap zoom on buttons without breaking pinch zoom */
+  button {
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-2xl bg-eas-pink px-6 py-4 text-lg font-bold text-white shadow-lg shadow-eas-pink/30 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .card {
+    @apply rounded-3xl bg-eas-ink/80 backdrop-blur-sm ring-1 ring-white/5 shadow-2xl;
+  }
+}

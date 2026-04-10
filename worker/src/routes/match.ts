@@ -1,0 +1,79 @@
+import { isAuthorized } from '../lib/auth';
+import { fillReasons } from '../lib/claude';
+import { errorResponse, jsonResponse } from '../lib/cors';
+import {
+  listParticipants,
+  markMatchesGenerated,
+  putMatchPointer,
+  putPair,
+  resetAll,
+} from '../lib/kv';
+import { greedyPairing } from '../lib/matching';
+import { loadQuestions } from '../questions';
+import type { Env, Participant } from '../lib/types';
+
+/**
+ * POST /api/match — protected with ADMIN_PASSWORD.
+ * Runs the greedy pairing + Claude reasons, then persists pairs + pointers.
+ * Idempotent-ish: re-running wipes previous pair data (not participants)
+ * and recomputes everything.
+ */
+export async function handleMatch(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') return errorResponse(405, 'Method not allowed');
+  if (!isAuthorized(request, env)) return errorResponse(401, 'Unauthorized');
+
+  const participants = await listParticipants(env);
+  if (participants.length < 2) {
+    return errorResponse(400, 'Need at least 2 participants to generate matches');
+  }
+
+  const questions = loadQuestions();
+
+  // Wipe any previous pair:* and match:* keys so re-runs stay clean.
+  await clearPairData(env);
+
+  const pairs = greedyPairing(participants, questions);
+
+  const byId = new Map<string, Participant>(
+    participants.map((p) => [p.sessionId, p])
+  );
+  await fillReasons(env, pairs, byId, questions);
+
+  // Persist pairs and session→pair pointers in parallel.
+  const writes: Promise<unknown>[] = [];
+  for (const pair of pairs) {
+    writes.push(putPair(env, pair));
+    for (const m of pair.members) {
+      writes.push(putMatchPointer(env, m.sessionId, pair.id));
+    }
+  }
+  await Promise.all(writes);
+  await markMatchesGenerated(env);
+
+  return jsonResponse({
+    ok: true,
+    participants: participants.length,
+    pairs: pairs.length,
+  });
+}
+
+/**
+ * Delete pair:* and match:* but keep participant:* — lets the admin
+ * re-generate matches after late arrivals without losing responses.
+ */
+async function clearPairData(env: Env): Promise<void> {
+  // We reuse resetAll by listing + deleting only the two relevant prefixes.
+  // Keeping it inline avoids exposing a narrow helper for a single callsite.
+  const prefixes = ['pair:', 'match:'];
+  for (const prefix of prefixes) {
+    let cursor: string | undefined;
+    do {
+      const page = await env.KV.list({ prefix, cursor });
+      await Promise.all(page.keys.map((k) => env.KV.delete(k.name)));
+      cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
+  }
+}
+
+// Re-export for testing / direct use if ever needed.
+export { resetAll };

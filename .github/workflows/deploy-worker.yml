@@ -1,0 +1,38 @@
+name: Deploy worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - 'questions.json'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy Worker
+        run: npx wrangler deploy
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # Note: secrets (ANTHROPIC_API_KEY, ADMIN_PASSWORD) are NOT deployed
+      # here. Set them once manually with:
+      #   cd worker && npx wrangler secret put ANTHROPIC_API_KEY
+      #   cd worker && npx wrangler secret put ADMIN_PASSWORD

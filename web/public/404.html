@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>QuizEAS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      SPA fallback for GitHub Pages.
+
+      GitHub Pages is a static host: any URL that isn't a real file 404s.
+      For client-side routes (e.g. /admin) we trick Pages into serving our
+      SPA by:
+        1. Pages returns this 404.html for the unknown path.
+        2. This script encodes the original path into a query string and
+           redirects to "/", which Pages happily serves as index.html.
+        3. A tiny script in index.html decodes the query string and calls
+           history.replaceState to restore the original URL before React
+           mounts — so main.tsx sees the correct pathname.
+
+      Technique adapted from rafgraph/spa-github-pages. Since we use a
+      custom domain served from the root, segmentCount = 0.
+    -->
+    <script>
+      (function () {
+        var segmentCount = 0;
+        var l = window.location;
+        l.replace(
+          l.protocol +
+            '//' +
+            l.hostname +
+            (l.port ? ':' + l.port : '') +
+            l.pathname
+              .split('/')
+              .slice(0, 1 + segmentCount)
+              .join('/') +
+            '/?/' +
+            l.pathname
+              .slice(1)
+              .split('/')
+              .slice(segmentCount)
+              .join('/')
+              .replace(/&/g, '~and~') +
+            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+            l.hash
+        );
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

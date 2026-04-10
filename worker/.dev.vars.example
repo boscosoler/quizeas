@@ -1,0 +1,8 @@
+# Copy to `worker/.dev.vars` and fill in with real values.
+# wrangler dev loads this automatically. Do NOT commit .dev.vars.
+
+ANTHROPIC_API_KEY="sk-ant-..."
+ADMIN_PASSWORD="eas2026"
+
+# Optional override; falls back to wrangler.toml [vars] value.
+# MATCH_MODEL="claude-sonnet-4-20250514"

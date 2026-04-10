@@ -1,0 +1,20 @@
+{
+  "name": "quizeas",
+  "private": true,
+  "version": "0.1.0",
+  "description": "QuizEAS — Dinámica de networking con IA para el Encuentro Anual SinOficina 2026",
+  "workspaces": [
+    "web",
+    "worker"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,worker -c magenta,cyan \"npm:dev:web\" \"npm:dev:worker\"",
+    "dev:web": "npm run dev --workspace=web",
+    "dev:worker": "npm run dev --workspace=worker",
+    "build": "npm run build --workspace=web",
+    "preview": "npm run preview --workspace=web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
