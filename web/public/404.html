@@ -12,18 +12,28 @@
       SPA by:
         1. Pages returns this 404.html for the unknown path.
         2. This script encodes the original path into a query string and
-           redirects to "/", which Pages happily serves as index.html.
+           redirects to the app root, which Pages happily serves as
+           index.html.
         3. A tiny script in index.html decodes the query string and calls
            history.replaceState to restore the original URL before React
            mounts — so main.tsx sees the correct pathname.
 
-      Technique adapted from rafgraph/spa-github-pages. Since we use a
-      custom domain served from the root, segmentCount = 0.
+      Technique adapted from rafgraph/spa-github-pages.
+
+      The app ships to two possible URLs and this file has to work for both:
+        - quizeas.sinoficina.com       → served at "/",         segmentCount = 0
+        - boscosoler.github.io/quizeas → served at "/quizeas/", segmentCount = 1
+      We detect the project-page case by looking at the hostname. If you
+      ever change the repo name, bump REPO_BASE below.
     -->
     <script>
       (function () {
-        var segmentCount = 0;
+        var REPO_BASE = 'quizeas';
         var l = window.location;
+        var isProjectPage =
+          l.hostname.endsWith('github.io') &&
+          l.pathname.split('/')[1] === REPO_BASE;
+        var segmentCount = isProjectPage ? 1 : 0;
         l.replace(
           l.protocol +
             '//' +

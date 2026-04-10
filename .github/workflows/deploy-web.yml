@@ -43,6 +43,12 @@ jobs:
           # https://api.quizeas.sinoficina.com in production builds (see
           # web/src/api/base.ts).
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+          # Base path for the built site. Leave empty (or "/") for the
+          # custom-domain deployment at quizeas.sinoficina.com. Set to
+          # "/quizeas/" via a repo variable to ship the project-page build
+          # at boscosoler.github.io/quizeas/ (the CNAME is auto-stripped
+          # in that case — see web/vite.config.ts).
+          BASE_PATH: ${{ vars.BASE_PATH }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

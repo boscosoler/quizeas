@@ -79,6 +79,39 @@ Dos piezas, dos hostings, dos subdominios:
 El frontend usa `VITE_API_BASE` en build time. En producción apunta a
 `https://api.quizeas.sinoficina.com` (ver `web/src/api/base.ts`).
 
+### Dos posibles URLs para la SPA
+
+La misma build puede publicarse en dos sitios:
+
+| URL                                    | `BASE_PATH`  | CNAME        |
+| -------------------------------------- | ------------ | ------------ |
+| `https://quizeas.sinoficina.com/`      | `/` (default)| incluido     |
+| `https://boscosoler.github.io/quizeas/`| `/quizeas/`  | auto-strip   |
+
+Cómo funciona:
+
+- `web/vite.config.ts` lee `process.env.BASE_PATH`. Por defecto `/`. Si
+  le pasas `/quizeas/` todos los assets y rutas se sirven bajo ese prefijo.
+- Cuando `BASE_PATH` no es `/`, un plugin de Vite borra `dist/CNAME`
+  antes de publicar (porque el CNAME solo tiene sentido en la build
+  del dominio custom).
+- `web/public/404.html` detecta al vuelo si está en `*.github.io/quizeas`
+  y usa `segmentCount = 1`; en cualquier otro host usa `0`.
+- `web/src/main.tsx` recorta `import.meta.env.BASE_URL` antes de
+  decidir si estamos en `/admin`, así que el panel funciona tanto en
+  `/admin` como en `/quizeas/admin`.
+
+Para activar el build de la project page en CI basta con crear la
+repo variable `BASE_PATH = /quizeas/` en GitHub (Settings → Secrets
+and variables → Actions → Variables). Quítala (o ponla a `/`) para
+volver a la build del dominio custom.
+
+Build local de la project page:
+
+```bash
+BASE_PATH=/quizeas/ npm run build --workspace=web
+```
+
 ## Cómo desplegar (primera vez)
 
 Ver **CHECKLIST DE DESPLIEGUE** más abajo. Contiene todo lo que tienes que
