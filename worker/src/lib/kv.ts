@@ -154,15 +154,56 @@ export async function incrementParticipantCount(env: Env): Promise<void> {
 
 // ── Reset ─────────────────────────────────────────────────────────────────
 
-/** Delete everything under the known prefixes. */
+/**
+ * Wipe every key under the participant:, pair:, match: and meta: prefixes.
+ *
+ * This fights against two quirks of Cloudflare KV:
+ *
+ *   1. KV.list pages at most 1000 keys per call — we already paginate
+ *      via cursor, but be explicit about it and about the limit so
+ *      nobody accidentally reintroduces a non-paginated call.
+ *
+ *   2. KV.list is *eventually consistent*: recent writes may not appear
+ *      immediately, and concurrent submits during a reset could slip
+ *      keys past a single sweep. Loop each prefix with a safety cap
+ *      until a pass finds nothing.
+ *
+ * And — crucially — end by writing meta:count=0 explicitly. Otherwise
+ * the next getParticipantCount after reset sees a missing counter key
+ * and falls into its list-based backfill, which briefly sees the ghost
+ * participant keys still in the list index (they're marked deleted but
+ * KV.list hasn't caught up yet). That was re-inflating the counter to
+ * its pre-reset value and breaking match generation downstream. A
+ * hard-coded 0 short-circuits the backfill path entirely.
+ */
 export async function resetAll(env: Env): Promise<void> {
-  const prefixes = Object.values(PREFIX);
-  for (const prefix of prefixes) {
-    let cursor: string | undefined;
-    do {
-      const page = await env.KV.list({ prefix, cursor });
-      await Promise.all(page.keys.map((k) => env.KV.delete(k.name)));
-      cursor = page.list_complete ? undefined : page.cursor;
-    } while (cursor);
+  const MAX_PASSES = 5;
+  const LIST_LIMIT = 1000;
+
+  // Belt and suspenders: delete known singleton meta keys by name, even
+  // if the list index happens not to surface them on this call.
+  await Promise.all([
+    env.KV.delete(COUNT_KEY),
+    env.KV.delete(PREFIX.meta + 'matchesGenerated'),
+  ]);
+
+  for (const prefix of Object.values(PREFIX)) {
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      let deletedThisPass = 0;
+      let cursor: string | undefined;
+      do {
+        const page = await env.KV.list({ prefix, cursor, limit: LIST_LIMIT });
+        if (page.keys.length > 0) {
+          await Promise.all(page.keys.map((k) => env.KV.delete(k.name)));
+          deletedThisPass += page.keys.length;
+        }
+        cursor = page.list_complete ? undefined : page.cursor;
+      } while (cursor);
+      if (deletedThisPass === 0) break;
+    }
   }
+
+  // Seed the counter so the post-reset getParticipantCount never takes
+  // the list-based backfill path. See the doc block above.
+  await env.KV.put(COUNT_KEY, '0');
 }

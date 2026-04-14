@@ -3,6 +3,7 @@ import { errorResponse, jsonResponse, withCors } from '../lib/cors';
 import { buildCsv } from '../lib/csv';
 import { listPairs, listParticipants, resetAll } from '../lib/kv';
 import { loadQuestions } from '../questions';
+import { invalidateStatusCache } from './status';
 import type { Env, Participant } from '../lib/types';
 
 export async function handleAdminResults(
@@ -61,5 +62,6 @@ export async function handleAdminReset(
   if (request.method !== 'POST') return errorResponse(405, 'Method not allowed');
   if (!isAuthorized(request, env)) return errorResponse(401, 'Unauthorized');
   await resetAll(env);
+  invalidateStatusCache();
   return jsonResponse({ ok: true });
 }

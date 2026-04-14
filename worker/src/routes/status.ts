@@ -32,6 +32,16 @@ interface CachedStatus {
 // payload is not user-scoped.
 let cached: CachedStatus | null = null;
 
+/**
+ * Drop any memoised status. Call after mutations that would make the
+ * cached value misleading — currently just /api/admin/reset. Only
+ * affects the local isolate; other isolates will refresh naturally
+ * within STATUS_CACHE_TTL_MS.
+ */
+export function invalidateStatusCache(): void {
+  cached = null;
+}
+
 export async function handleStatus(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'GET') return errorResponse(405, 'Method not allowed');
 
