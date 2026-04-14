@@ -1,5 +1,5 @@
 import { errorResponse, jsonResponse } from '../lib/cors';
-import { areMatchesGenerated, countParticipants } from '../lib/kv';
+import { areMatchesGenerated, getParticipantCount } from '../lib/kv';
 import type { Env } from '../lib/types';
 
 /**
@@ -7,8 +7,9 @@ import type { Env } from '../lib/types';
  *
  * Two optimisations over the naive version:
  *
- *   1. countParticipants only pages through keys; no per-participant
- *      KV.get. That alone drops ~150 reads/call down to 1 for our scale.
+ *   1. getParticipantCount reads a single `meta:count` key maintained
+ *      incrementally by /api/submit. No KV.list involved, regardless
+ *      of participant count.
  *   2. A small per-isolate cache. Worker isolates are reused across
  *      requests in the same colo, so when the admin polls every 3s the
  *      second+ call in the TTL window returns memoised state and does
@@ -40,7 +41,7 @@ export async function handleStatus(request: Request, env: Env): Promise<Response
   }
 
   const [completed, matchesGenerated] = await Promise.all([
-    countParticipants(env),
+    getParticipantCount(env),
     areMatchesGenerated(env),
   ]);
 

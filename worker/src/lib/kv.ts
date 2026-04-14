@@ -32,22 +32,6 @@ export async function getParticipant(
   return raw ? (JSON.parse(raw) as Participant) : null;
 }
 
-/**
- * Count participants without fetching each record. Used by /api/status,
- * which only needs the number, not the bodies — this drops the per-call
- * cost from 1 list + N gets down to just the list pagination.
- */
-export async function countParticipants(env: Env): Promise<number> {
-  let total = 0;
-  let cursor: string | undefined;
-  do {
-    const page = await env.KV.list({ prefix: PREFIX.participant, cursor });
-    total += page.keys.length;
-    cursor = page.list_complete ? undefined : page.cursor;
-  } while (cursor);
-  return total;
-}
-
 export async function listParticipants(env: Env): Promise<Participant[]> {
   const keys: string[] = [];
   let cursor: string | undefined;
@@ -112,12 +96,60 @@ export async function getPairForSession(
 
 // ── Meta ──────────────────────────────────────────────────────────────────
 
+const COUNT_KEY = PREFIX.meta + 'count';
+
 export async function markMatchesGenerated(env: Env): Promise<void> {
   await env.KV.put(PREFIX.meta + 'matchesGenerated', '1');
 }
 
 export async function areMatchesGenerated(env: Env): Promise<boolean> {
   return (await env.KV.get(PREFIX.meta + 'matchesGenerated')) === '1';
+}
+
+/**
+ * Read the participant counter. Single KV.get — O(1) regardless of
+ * how many participants exist. Replaces the former KV.list scan that
+ * was burning through list operations on every /api/status poll.
+ *
+ * One-time backfill: if the counter key is missing (fresh deploy over
+ * pre-existing participant data), seed it by listing once. Subsequent
+ * calls in this isolate and all other isolates hit the cached key and
+ * never list again. Callers that increment the counter also benefit,
+ * so submits don't undercount pre-existing participants either.
+ */
+export async function getParticipantCount(env: Env): Promise<number> {
+  const raw = await env.KV.get(COUNT_KEY);
+  if (raw !== null) {
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  // Seed from the current participant prefix. Only pages keys, no bodies.
+  let total = 0;
+  let cursor: string | undefined;
+  do {
+    const page = await env.KV.list({ prefix: PREFIX.participant, cursor });
+    total += page.keys.length;
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  await env.KV.put(COUNT_KEY, String(total));
+  return total;
+}
+
+/**
+ * Bump the counter by one. Call only when a genuinely new participant
+ * record is being created (not on upserts from a resubmit).
+ *
+ * Not atomic: two concurrent new-participant submits could both read
+ * N and both write N+1, undercounting by 1. For a ~150-person live
+ * event with mostly-serial submits this is acceptable; the alternative
+ * (Durable Object for strict atomicity) is overkill. The counter is
+ * advisory anyway — the admin still sees the authoritative list in
+ * /api/admin/results.
+ */
+export async function incrementParticipantCount(env: Env): Promise<void> {
+  const current = await getParticipantCount(env);
+  await env.KV.put(COUNT_KEY, String(current + 1));
 }
 
 // ── Reset ─────────────────────────────────────────────────────────────────

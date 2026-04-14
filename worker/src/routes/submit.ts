@@ -1,5 +1,9 @@
 import { errorResponse, jsonResponse } from '../lib/cors';
-import { getParticipant, putParticipant } from '../lib/kv';
+import {
+  getParticipant,
+  incrementParticipantCount,
+  putParticipant,
+} from '../lib/kv';
 import type { Answer, Env, Participant } from '../lib/types';
 
 interface SubmitBody {
@@ -52,6 +56,13 @@ export async function handleSubmit(request: Request, env: Env): Promise<Response
     completedAt: now,
   };
   await putParticipant(env, participant);
+
+  // Only bump the counter for genuinely new participants, so resubmits
+  // from the same session don't inflate it. /api/status reads this
+  // counter instead of listing the participant prefix.
+  if (!existing) {
+    await incrementParticipantCount(env);
+  }
 
   return jsonResponse({ ok: true });
 }
