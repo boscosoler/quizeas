@@ -2,10 +2,12 @@ import { isAuthorized } from '../lib/auth';
 import { fillReasons } from '../lib/claude';
 import { errorResponse, jsonResponse } from '../lib/cors';
 import {
+  deletePairsBlob,
   listParticipants,
   markMatchesGenerated,
   putMatchPointer,
   putPair,
+  putPairsBlob,
   resetAll,
 } from '../lib/kv';
 import { greedyPairing } from '../lib/matching';
@@ -39,8 +41,13 @@ export async function handleMatch(request: Request, env: Env): Promise<Response>
   );
   await fillReasons(env, pairs, byId, questions);
 
-  // Persist pairs and session→pair pointers in parallel.
-  const writes: Promise<unknown>[] = [];
+  // Persist pairs and session→pair pointers in parallel. Also write
+  // the full pairs blob at meta:pairs so downstream admin endpoints
+  // (CSV, admin results) can enumerate pairs with a strongly-consistent
+  // single KV.get instead of going through KV.list, which was returning
+  // empty for up to ~60s after these writes and leaving the CSV with
+  // only headers.
+  const writes: Promise<unknown>[] = [putPairsBlob(env, pairs)];
   for (const pair of pairs) {
     writes.push(putPair(env, pair));
     for (const m of pair.members) {
@@ -69,10 +76,11 @@ export async function handleMatch(request: Request, env: Env): Promise<Response>
 /**
  * Delete pair:* and match:* but keep participant:* — lets the admin
  * re-generate matches after late arrivals without losing responses.
+ * Also drops meta:pairs so a subsequent listPairs doesn't serve the
+ * previous generation's blob before the new one is written.
  */
 async function clearPairData(env: Env): Promise<void> {
-  // We reuse resetAll by listing + deleting only the two relevant prefixes.
-  // Keeping it inline avoids exposing a narrow helper for a single callsite.
+  await deletePairsBlob(env);
   const prefixes = ['pair:', 'match:'];
   for (const prefix of prefixes) {
     let cursor: string | undefined;

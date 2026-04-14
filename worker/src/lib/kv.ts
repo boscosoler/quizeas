@@ -6,9 +6,15 @@ import type { Env, Participant, Pair } from './types';
  *
  * Layout:
  *   participant:{sessionId}  -> Participant
- *   pair:{uuid}              -> Pair (canonical, used by admin/listing)
- *   match:{sessionId}        -> pointer { pairId } for fast participant lookup
+ *   pair:{uuid}              -> Pair (canonical body, per-participant lookup)
+ *   match:{sessionId}        -> pairId (pointer for fast participant lookup)
  *   meta:matchesGenerated    -> "1" once /api/match has run
+ *   meta:count               -> decimal string; live participant counter
+ *   meta:pairs               -> JSON array of all Pair bodies, written
+ *                               atomically at match-generation time so
+ *                               CSV/admin listings can avoid KV.list
+ *                               (which is eventually consistent and was
+ *                               returning empty right after generation).
  */
 
 const PREFIX = {
@@ -57,7 +63,42 @@ export async function putPair(env: Env, pair: Pair): Promise<void> {
   await env.KV.put(PREFIX.pair + pair.id, JSON.stringify(pair));
 }
 
+/**
+ * Persist the full set of pairs as a single JSON blob at meta:pairs.
+ * Strongly consistent on read (unlike KV.list), so downstream admin
+ * endpoints can enumerate pairs right after generation without hitting
+ * the list-index staleness window.
+ */
+export async function putPairsBlob(env: Env, pairs: Pair[]): Promise<void> {
+  await env.KV.put(PAIRS_BLOB_KEY, JSON.stringify(pairs));
+}
+
+export async function getPairsBlob(env: Env): Promise<Pair[] | null> {
+  const raw = await env.KV.get(PAIRS_BLOB_KEY);
+  if (raw === null) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Pair[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deletePairsBlob(env: Env): Promise<void> {
+  await env.KV.delete(PAIRS_BLOB_KEY);
+}
+
+/**
+ * All pairs, in one list. Prefers the meta:pairs blob (strong read)
+ * and only falls back to the legacy list-then-get path when the blob
+ * is missing (e.g. data left over from a previous deploy). That list
+ * path is eventually consistent — which is exactly why we added the
+ * blob — so it's only here as a compatibility net.
+ */
 export async function listPairs(env: Env): Promise<Pair[]> {
+  const blob = await getPairsBlob(env);
+  if (blob !== null) return blob;
+
   const keys: string[] = [];
   let cursor: string | undefined;
   do {
@@ -97,6 +138,7 @@ export async function getPairForSession(
 // ── Meta ──────────────────────────────────────────────────────────────────
 
 const COUNT_KEY = PREFIX.meta + 'count';
+const PAIRS_BLOB_KEY = PREFIX.meta + 'pairs';
 
 export async function markMatchesGenerated(env: Env): Promise<void> {
   await env.KV.put(PREFIX.meta + 'matchesGenerated', '1');
@@ -184,6 +226,7 @@ export async function resetAll(env: Env): Promise<void> {
   // if the list index happens not to surface them on this call.
   await Promise.all([
     env.KV.delete(COUNT_KEY),
+    env.KV.delete(PAIRS_BLOB_KEY),
     env.KV.delete(PREFIX.meta + 'matchesGenerated'),
   ]);
 
