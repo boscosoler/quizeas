@@ -37,7 +37,13 @@ export function ParticipantApp() {
     [questions]
   );
 
-  // Poll for the match result while on waiting. Backs off gracefully.
+  // Poll for the match result while on waiting. Only runs on step="waiting"
+  // (the effect early-returns otherwise) and the cleanup cancels in-flight
+  // timers so navigating away stops the polling immediately. Every request
+  // costs two KV reads (pointer + pair), so keep the cadence relaxed: 5s
+  // is still snappy for a ~150-person event and halves the read load vs
+  // the previous 2.5s.
+  const POLL_MS = 5000;
   useEffect(() => {
     if (step !== 'waiting') return;
     let cancelled = false;
@@ -56,10 +62,10 @@ export function ParticipantApp() {
       } catch (err) {
         console.warn('results poll failed', err);
       }
-      timer = window.setTimeout(tick, 2500);
+      timer = window.setTimeout(tick, POLL_MS);
     }
 
-    // First poll immediately, then every 2.5s.
+    // First poll immediately, then every POLL_MS.
     tick();
 
     return () => {

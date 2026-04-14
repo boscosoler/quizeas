@@ -32,6 +32,22 @@ export async function getParticipant(
   return raw ? (JSON.parse(raw) as Participant) : null;
 }
 
+/**
+ * Count participants without fetching each record. Used by /api/status,
+ * which only needs the number, not the bodies — this drops the per-call
+ * cost from 1 list + N gets down to just the list pagination.
+ */
+export async function countParticipants(env: Env): Promise<number> {
+  let total = 0;
+  let cursor: string | undefined;
+  do {
+    const page = await env.KV.list({ prefix: PREFIX.participant, cursor });
+    total += page.keys.length;
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return total;
+}
+
 export async function listParticipants(env: Env): Promise<Participant[]> {
   const keys: string[] = [];
   let cursor: string | undefined;
